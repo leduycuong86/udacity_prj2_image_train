@@ -25,6 +25,7 @@ def parser_arguments():
     parser.add_argument('--hidden_units', type=int, default=512, help='Number of hidden units, default 512')
     parser.add_argument('--epochs', type=int, default=15, help='Number of epochs')
     parser.add_argument('--gpu', action='store_true', default='gpu', help='use GPU or CPU for training')
+    parser.add_argument('--save_dir', type=str, default = './', help='save directory')
 
     return parser.parse_args()
 
@@ -204,13 +205,18 @@ def main():
     print("=============== Finish training ==================================")
 
     # TODO: Save the checkpoint
-    save_checkpoint_path = 'checkpoint_path.pth'
+    save_checkpoint_path = args.save_dir + 'checkpoint_path.pth'
     model.class_to_idx = train_data.class_to_idx
     torch.save(
         {
             'class_to_idx': model.class_to_idx,
-            'model_state_dict': model.state_dict(),
-            'arch': arch
+            'input_size': 25088,
+            'output_size': 102,
+            'structure': 'vgg16',
+            'learning_rate': 0.001,
+            'epochs': epochs,
+            'optimizer': optimizer.state_dict(),
+            'state_dict': model.state_dict(),
         }, 
         save_checkpoint_path
     )
@@ -222,4 +228,4 @@ if __name__ == '__main__':
     
 # Command
 # python train.py flowers --gpu --epochs 10
-# python train.py flowers --learning_rate 0.001 --hidden_units 512 --epochs 3 --arch vgg16 --gpu
+# python train.py flowers --learning_rate 0.001 --hidden_units 512 --epochs 20 --save_dir ./ --arch vgg16 --gpu
