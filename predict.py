@@ -8,6 +8,7 @@ import os
 from PIL import Image
 import json
 import torch.nn as nn
+from collections import OrderedDict
 
 # 1. Load and process the image dataset
 # 1.1. parse argument
@@ -81,22 +82,30 @@ def load_checkpoint_data(path):
     if not path_is_exist(path):
         return
     checkpoint = torch.load(path)
-    if checkpoint['arch'] == 'densenet121':
+    if checkpoint['structure'] == 'densenet121':
         model = models.densenet121(pretrained=True)
-    elif checkpoint['arch'] == 'vgg16':
+    elif checkpoint['structure'] == 'vgg16':
         model = models.vgg16(pretrained = True)
     else:
         raise ValueError('Model load arch error.')
     for param in model.parameters():
         param.requires_grad = False
+
+    model.classifier = nn.Sequential(OrderedDict([
+                          ('fc1', nn.Linear(model.classifier[0].in_features, 512)),
+                          ('relu', nn.ReLU()),
+                          ('d_out1', nn.Dropout(p=0.3)),
+                          ('fc2', nn.Linear(512, 256)),
+                          ('d_out2', nn.Dropout(p=0.3)),
+                          ('relu', nn.ReLU()),
+                          ('output', nn.LogSoftmax(dim=1))
+                        ]))
     
-    model_dict = model.state_dict()
-    checkpoint = {k: v for k, v in checkpoint.items() if 'classifier' not in k}
-    model_dict.update(checkpoint)
-    model.load_state_dict(model_dict)
+    print(checkpoint.keys())
+
     #model.classifier = checkpoint['classifier']
     model.class_to_idx = checkpoint['class_to_idx']
-    #model.load_state_dict(checkpoint['model_state_dict'])    
+    model.load_state_dict(checkpoint['state_dict'])    
         
     return model
 
@@ -104,7 +113,8 @@ def img_prediction_show(cat2name, probs, indeces, topk = 5):
     probs = probs[0].cpu().numpy()
     indeces = indeces[0].cpu().numpy()
     class_names = [cat2name[str(idx + 1)] for idx in indeces]
-    print("Class names: " + class_names)
+    print("Class names: ")
+    print(class_names)
     #print("Probs: " + probs)
     for i in range(topk):
         print(f"{class_names[i]}: {probs[i] * 100:.2f}%")
